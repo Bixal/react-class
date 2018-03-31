@@ -1,0 +1,19 @@
+<?php
+
+function debugacademy_react_preprocess_field(&$variables) {
+  if ($variables['field_type'] == 'integer') {
+    $bundle = $variables['element']['#bundle'];
+    $entity_type = $variables['element']['#entity_type'];
+    $field_name = $variables['element']['#field_name'];
+
+    $bundle_fields = \Drupal::getContainer()->get('entity_field.manager')->getFieldDefinitions($entity_type, $bundle);
+    $field_definition = $bundle_fields[$field_name];
+
+    $field_min = $field_definition->getSetting('min');
+    $field_max = $field_definition->getSetting('max');
+
+    $variables['field_min'] = $field_min;
+    $variables['field_max'] = $field_max;
+  }
+  return $variables;
+}

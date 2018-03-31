@@ -1,0 +1,8 @@
+
+debugacademy_react.time_entry_controller_enter_time:
+  path: '/debugacademy_react/timesheet'
+  defaults:
+    _controller: '\Drupal\debugacademy_react\Controller\TimeEntryController::time_entry'
+    _title: 'Tasks'
+  requirements:
+    _permission: 'access content'

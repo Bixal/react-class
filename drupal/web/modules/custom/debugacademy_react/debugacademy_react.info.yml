@@ -1,0 +1,6 @@
+name: ReactJS fields by Debug Academy
+description: Provides fancy React fields
+package: Administration
+
+type: module
+core: 8.x
