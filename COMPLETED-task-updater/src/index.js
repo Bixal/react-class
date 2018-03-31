@@ -85,33 +85,38 @@ const styles = theme => ({
   },
 });
 
+// This Component is the outer container of our task entry app.
 class TimeSheet extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      timeSheetEntries: [],
+      // The row data is stored in this object.
       formattedData: [],
+      // A boolean which determines whether to display an error.
       fetchFailed: false,
+      // If true, display a small pop up with the "reloadMessage" text.
       snackbarOpen: true,
       reloadMessage: "Loading Data..."
     }
   }
+
+  // Similar to a "hook" in Drupal. Runs after the component mounts.
   componentDidMount() {
-    // Load entries
-    // EXERCISE: move refreshAllTaskData here, after earlier button press implementation.
+    // Load data after the component mounts
    this.refreshAllTaskData();
   }
-  handleSubmit(event) {
-    // Add loading bar because JS is asynchronous
-    var formattedData = this.state.formattedData;
-    formattedData['title'] = event.target.value;
-    this.setState({ formattedData: formattedData });
-    this.setState({snackbarOpen: true});
-  }
+
+  // Performs a "GET" request to Drupal for task nodes.
   refreshAllTaskData() {
+    // Triggers a status message popup using the "Snackbar" component.
     this.handleOpen();
+
+    // This is a "query buster". Ensures we always GET from
+    // a "different" URL so that we don't receive cached responses.
     var queryTime = Date.now();
-    var url = 'http://dev-1.academyvm.test/drupal/web/jsonapi/node/task?time=' + queryTime;
+    var url = 'http://ReactForDrupal.dd:8083/jsonapi/node/task?time=' + queryTime;
+    // axios fetches the data for us. If successful, it calls "setAllTaskData"
+    // If unsuccessful, it sets the state "fetchFailed" to true.
     axios.get(url)
       .then(result => {
         this.setAllTaskData(result, queryTime);
@@ -122,17 +127,21 @@ class TimeSheet extends React.Component {
       })
       .catch(error => this.setState({fetchFailed: true}));
   }
-  setAllTaskData(data, queryTime) {
 
+  // Updates the formattedData state with the latest data.
+  // State updates using setState trigger component re-renders.
+  setAllTaskData(data, queryTime) {
     var formattedData = {};
-    // Note for students: Typically the 'map' function is preferred to
+    // Typically the 'map' function is preferred to
     // foreach loops in JS when dealing with performing the same operation
     // on every element in an array.
 
-    // Acts on every element within the array data.data.data
-    // I used console.log(data) to find the data I was looking for
-    // - it turned out it was located at data.data.data..
+    // This code acts on every element within the array data.data.data
+    // I used console.log(data) to find the data the API returned
+    // - it turned out what I needed was located at data.data.data.
     data.data.data.map((i,v) => {
+      // I'm using Drupal's uuid as the 'key/property' name
+      // This makes it easy for me to tell what task each element is for.
       formattedData[i.attributes.uuid] = {
         body: i.attributes.body.value,
         estimated_time: i.attributes.field_hours,
@@ -145,15 +154,25 @@ class TimeSheet extends React.Component {
       }
     });
 
+    // Calling setState triggers a re-render of this entity.
     this.setState({
       formattedData: formattedData
     });
   }
 
-  // Implement this for homework!
+  // @Students Implement this!
+  // You'll need to:
+  //   - Set up an axios.post request
+  //   - Place a "create new task" button
+  //   - Add a bare "task" entry to the formattedData object
+  //   - Be sure to set the task_id attribute to 0 so it does not trigger an update
+  //   - That will trigger an auto-refresh, and you'll have your new row!
+
   createNewTask(data) {
   }
 
+  // Loops through formattedData, calls saveAllTaskData
+  // for each uuid key in formattedData.
   saveAllTaskData() {
     for (var uuid in this.state.formattedData) {
        if (this.state.formattedData.hasOwnProperty(uuid)) {
@@ -161,6 +180,8 @@ class TimeSheet extends React.Component {
        }
     }
   }
+
+
   saveTaskData(uuid) {
     var data = {};
     data = this.state.formattedData[uuid];
@@ -189,6 +210,11 @@ class TimeSheet extends React.Component {
       });
   }
 
+  // Updates the appropriate title field whenever a key is pressed
+  // A state value is being updated on every key press -
+  // That means the component is re-rendering for every key press!
+  // Not a mistake. Those operations are relatively cheap thanks
+  // to React's VirtualDOM.
   handleChange(event) {
     var formattedData = this.state.formattedData;
     formattedData[event.target.id]["title"] = event.target.value;
@@ -199,12 +225,15 @@ class TimeSheet extends React.Component {
     );
   }
 
+  // Show the little "Snackbar" popup at the bottom of the page during reloads.
   handleOpen() {
     this.setState({
       snackbarOpen: true,
       reloadMessage: "Reloading data..."
     });
   }
+
+  // Closes the little "Snackbar" popup at the bottom of the page.
   handleClose() {
     var _this = this;
     setTimeout(function(){
@@ -213,24 +242,26 @@ class TimeSheet extends React.Component {
       });
     }, 1000);
 
-    // Show the message for at least 3 seconds before closing
+    // Show the message for at least 3 seconds before closing.
+    // I put this so we'd have a chance to read the words! The "GET" operation
+    // was too fast to process it initially.
     setTimeout(function(){
       _this.setState({
         snackbarOpen: false
       });
     }, 3000);
-
   }
 
+  // The return value here is JSX that will be compiled to our component itself.
   render() {
     var classes = this.props.styles;
 
-    var timeSheetComponents = [];
+    var Time = [];
     for (var item in this.state.formattedData) {
        if (this.state.formattedData.hasOwnProperty(item)) {
          var v = this.state.formattedData[item];
          timeSheetComponents.push(
-           <TimeSheetRow taskId={v.task_id} taskTitle={v.title} taskUUID={v.uuid} key={item + v.queryTime} submitHandler={this.saveTaskData.bind(this)} changeHandler={this.handleChange.bind(this)} styles={ this.props.styles } />
+           <TimeSheetRow taskTitle={v.title} taskUUID={v.uuid} key={item + v.queryTime} submitHandler={this.saveTaskData.bind(this)} changeHandler={this.handleChange.bind(this)} styles={ this.props.styles } />
          );
        }
     }
@@ -274,7 +305,6 @@ class TimeSheetRow extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      id: this.props.taskId,
       taskTitle: this.props.taskTitle,
       fetchFailed: this.props.fetchFailed
     }
@@ -290,7 +320,7 @@ class TimeSheetRow extends React.Component {
       return <div>
         Error: Check back later.
         <Button className={classes.button} variant="raised" color="primary" onClick={ this.resetError.bind(this) }>
-        Or now..</Button>
+        Okay, reset this thing..</Button>
       </div>
     }
 
@@ -302,11 +332,10 @@ class TimeSheetRow extends React.Component {
               FormLabelClasses={{
                 focused: classes.inputLabelFocused,
               }}
-              htmlFor={'id-input-' + this.state.id}
-            >
+              htmlFor={'id-input-' + this.state.id}>
               Task ID
-            </InputLabel>
-            <Input
+          </InputLabel>
+          <Input
             disabled
               classes={{
                 underline: classes.inputUnderline,
@@ -342,21 +371,3 @@ class TimeSheetRow extends React.Component {
 }
 
 ReactDOM.render(<TimeSheet styles={ styles }/>, document.getElementById("react-timesheet"));
-
-
-/*
-use this to override drupal form elements??
-<input
-  accept="image/*"
-  className={classes.input}
-  id="raised-button-file"
-  multiple
-  type="file"
-/>
-/////??????      <label htmlFor="raised-button-file">
-  <Button variant="raised" component="span" className={classes.button}>
-    Uploadh
-  </Button>
-</label>
-
-*/
